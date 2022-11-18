@@ -1,9 +1,12 @@
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
-use std::{fs::File, path::PathBuf};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ApplicationConfig {
+pub struct ApplicationConfig {
     quiet: bool,
     working_dir: PathBuf,
     cache_dir: PathBuf,
@@ -20,7 +23,7 @@ impl Default for ApplicationConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct MinecraftConfig {
+pub struct MinecraftConfig {
     quiet: bool,
     gui: bool,
     accept_eula: bool,
@@ -37,7 +40,7 @@ impl Default for MinecraftConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct JavaConfig {
+pub struct JavaConfig {
     executable_override: Option<PathBuf>,
     memory_megabytes: u64,
     extra_flags: Vec<String>,
@@ -56,7 +59,7 @@ impl Default for JavaConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GitConfig {
+pub struct GitConfig {
     enabled: bool,
     use_lockfile: bool,
     pre_commands: Vec<String>,
@@ -76,10 +79,10 @@ impl Default for GitConfig {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Config {
-    application: ApplicationConfig,
-    minecraft: MinecraftConfig,
-    java: JavaConfig,
-    git: GitConfig,
+    pub application: ApplicationConfig,
+    pub minecraft: MinecraftConfig,
+    pub java: JavaConfig,
+    pub git: GitConfig,
 }
 
 impl Config {
@@ -91,15 +94,26 @@ impl Config {
     }
 
     pub fn config_path() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("server-tool.yml"))
+        Ok(Self::config_dir()?.join("server-tool-v2.yml"))
     }
 
     pub fn load() -> Result<Self> {
-        Ok(serde_yaml::from_reader(File::open(Self::config_path()?)?)?)
+        fs::create_dir_all(Self::config_dir()?)?;
+
+        match File::open(Self::config_path()?) {
+            Ok(file) => Ok(serde_yaml::from_reader(file)?),
+            Err(e) => {
+                log::warn!(
+                    "An error occurred while loading the config, falling back on the default one. {}", e
+                );
+                Ok(Config::default())
+            }
+        }
     }
 
-    pub fn write_default() -> Result<()> {
-        match serde_yaml::to_writer(File::create(Self::config_path()?)?, &Self::default()) {
+    pub fn write(&self) -> Result<()> {
+        fs::create_dir_all(Self::config_dir()?)?;
+        match serde_yaml::to_writer(File::create(Self::config_path()?)?, &self) {
             Err(e) => Err(e.into()),
             _ => Ok(()),
         }
