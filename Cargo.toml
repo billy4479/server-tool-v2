@@ -4,3 +4,9 @@ members = [
     "crates/server_tool_lib",
     "crates/server_tool_gui",
 ]
+
+[profile.release]
+lto = true
+strip = true
+opt-level = 3
+
