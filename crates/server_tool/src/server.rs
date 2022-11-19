@@ -31,9 +31,8 @@ impl Server {
                 continue;
             }
 
-            match Self::detect(&entry.path())? {
-                Some(server) => result.push(server),
-                None => {}
+            if let Some(server) = Self::detect(&entry.path())? {
+                result.push(server)
             }
         }
 

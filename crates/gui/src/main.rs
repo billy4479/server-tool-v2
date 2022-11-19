@@ -2,16 +2,15 @@
 
 use anyhow::Result;
 use eframe::egui;
-use server_tool::{config::Config, manifest::VersionManifest};
+use server_tool::{config::Config, manifest};
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     pretty_env_logger::init();
 
     let config = Config::load()?;
 
-    let manifest = VersionManifest::get_version_infos()?;
-    println!("{:?}", manifest);
-
+    let manifest = manifest::get_version_infos().await?;
     let options = eframe::NativeOptions::default();
     eframe::run_native(
         "Server Tool V2",

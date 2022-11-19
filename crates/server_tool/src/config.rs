@@ -100,6 +100,8 @@ impl Config {
     pub fn load() -> Result<Self> {
         fs::create_dir_all(Self::config_dir()?)?;
 
+        log::info!("Loading config...");
+
         match File::open(Self::config_path()?) {
             Ok(file) => Ok(serde_yaml::from_reader(file)?),
             Err(e) => {
