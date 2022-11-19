@@ -823,6 +823,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gui"
+version = "2.0.0"
+dependencies = [
+ "anyhow",
+ "eframe",
+ "log",
+ "pretty_env_logger",
+ "server_tool",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1776,18 +1787,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "server_tool_gui"
-version = "2.0.0"
-dependencies = [
- "anyhow",
- "eframe",
- "log",
- "pretty_env_logger",
- "server_tool_lib",
-]
-
-[[package]]
-name = "server_tool_lib"
+name = "server_tool"
 version = "2.0.0"
 dependencies = [
  "anyhow",

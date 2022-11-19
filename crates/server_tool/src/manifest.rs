@@ -7,10 +7,10 @@ use anyhow::{bail, Error, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct VersionManifest {
+pub struct VersionManifest {
     id: String,
-    java_url: String,
-    java_version: u32,
+    jar_url: String,
+    java_version: u64,
     sha1: String,
 }
 
@@ -22,7 +22,7 @@ impl VersionManifest {
         }
     }
 
-    fn get_version_infos() -> Result<Vec<VersionManifest>> {
+    pub fn get_version_infos() -> Result<Vec<VersionManifest>> {
         fs::create_dir_all(dirs::data_local_dir().expect("missing data dir"))?;
 
         let path = Self::get_manifest_path()?;
@@ -47,7 +47,7 @@ impl VersionManifest {
         let version_manifests_urls_lambda = || -> Option<Vec<&str>> {
             let mut result = Vec::<&str>::new();
 
-            for version in value.as_object()?["version"].as_array()? {
+            for version in value["versions"].as_array()? {
                 result.push(version.as_object()?["url"].as_str()?)
             }
 
@@ -59,11 +59,39 @@ impl VersionManifest {
             None => bail!("error parsing json"),
         }?;
 
+        let mut result = Vec::<VersionManifest>::new();
+
         // TODO: parallelize here?
         for manifest_url in version_manifests_urls {
-            // reqwest::blocking::get(manifest_url)
+            let value: serde_json::Value =
+                serde_json::from_reader(reqwest::blocking::get(manifest_url)?)?;
+
+            let lambda = || -> Option<VersionManifest> {
+                let java_version = value["javaVersion"].as_object()?["majorVersion"].as_u64()?;
+
+                let id = value["id"].as_str()?.to_string();
+
+                let server = value["downloads"].as_object()?["server"].as_object()?;
+                let sha1 = server["sha1"].as_str()?.to_string();
+                let jar_url = server["url"].as_str()?.to_string();
+
+                Some(VersionManifest {
+                    id,
+                    jar_url,
+                    java_version,
+                    sha1,
+                })
+            };
+
+            let manifest = match lambda() {
+                Some(manifest) => Ok::<VersionManifest, Error>(manifest),
+                None => bail!("error while parsing json"),
+            }?;
+
+            println!("{:?}", manifest);
+            result.push(manifest);
         }
 
-        todo!()
+        Ok(result)
     }
 }

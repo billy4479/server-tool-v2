@@ -1,12 +1,11 @@
 [workspace]
 
 members = [
-    "crates/server_tool_lib",
-    "crates/server_tool_gui",
+    "crates/server_tool",
+    "crates/gui",
 ]
 
 [profile.release]
 lto = true
 strip = true
 opt-level = 3
-

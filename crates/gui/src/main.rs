@@ -2,14 +2,17 @@
 
 use anyhow::Result;
 use eframe::egui;
-use server_tool_lib::config::Config;
+use server_tool::{config::Config, manifest::VersionManifest};
 
 fn main() -> Result<()> {
     pretty_env_logger::init();
 
-    let options = eframe::NativeOptions::default();
     let config = Config::load()?;
 
+    let manifest = VersionManifest::get_version_infos()?;
+    println!("{:?}", manifest);
+
+    let options = eframe::NativeOptions::default();
     eframe::run_native(
         "Server Tool V2",
         options,
