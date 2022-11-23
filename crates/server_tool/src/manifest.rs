@@ -42,11 +42,15 @@ pub async fn get_version_infos() -> Result<Vec<VersionManifest>> {
                 e
             );
 
-            let manifest = download_manifest().await?;
-            serde_json::to_writer_pretty(File::create(&path)?, &manifest)?;
-            Ok(manifest)
+            update_manifest().await
         }
     }
+}
+
+pub async fn update_manifest() -> Result<Vec<VersionManifest>> {
+    let manifest = download_manifest().await?;
+    serde_json::to_writer_pretty(File::create(get_manifest_path()?)?, &manifest)?;
+    Ok(manifest)
 }
 
 async fn download_manifest() -> Result<Vec<VersionManifest>> {

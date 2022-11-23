@@ -120,4 +120,8 @@ impl Config {
             _ => Ok(()),
         }
     }
+
+    pub fn to_yaml(&self) -> Result<String> {
+        Ok(serde_yaml::to_string(&self)?)
+    }
 }
