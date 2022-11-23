@@ -26,6 +26,8 @@ async fn main() -> Result<()> {
 struct MyApp {
     config: Option<Promise<Result<Config>>>,
     manifest: Option<Promise<Result<Vec<VersionManifest>>>>,
+    show_config_window: bool,
+    show_manifest_window: bool,
 }
 
 impl MyApp {
@@ -70,30 +72,67 @@ impl MyApp {
             Some(Ok(manifest)) => Some(manifest),
         }
     }
+
+    fn config_window(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        if !self.show_config_window {
+            return;
+        }
+        let Some(config) = self.load_config(ui) else {
+            return;
+        };
+
+        egui::Window::new("Config Manifest")
+            .scroll2([true, true])
+            .show(ctx, |ui| {
+                ui.add(Label::new(config.to_yaml().expect("lol")).wrap(false));
+            });
+    }
+
+    fn manifest_window(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
+        if !self.show_manifest_window {
+            return;
+        }
+        let Some(manifest) = self.load_manifest(ui) else {
+            return;
+        };
+
+        egui::Window::new("Version Manifest")
+            .scroll2([true, true])
+            .show(ctx, |ui| {
+                ui.add(Label::new(format!("{:#?}", manifest)).wrap(false));
+            });
+    }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let Some(config) = self.load_config(ui) else {
-                return;
-            };
+            self.config_window(ctx, ui);
+            self.manifest_window(ctx, ui);
 
-            ui.label(config.to_yaml().expect("lol"));
+            ui.heading("Server Tool");
+            if ui
+                .button(if self.show_config_window {
+                    "Hide config"
+                } else {
+                    "Show config"
+                })
+                .clicked()
+            {
+                self.show_config_window = !self.show_config_window;
+            }
 
-            let Some(manifest) = self.load_manifest(ui) else {
-                return;
-            };
+            if ui
+                .button(if self.show_manifest_window {
+                    "Hide manifest"
+                } else {
+                    "Show manifest"
+                })
+                .clicked()
+            {
+                self.show_manifest_window = !self.show_manifest_window;
+            }
 
-            egui::ScrollArea::both().show(ui, |ui| {
-                ui.add(Label::new(format!("{:#?}", manifest)).wrap(false));
-            });
-
-            // ui.heading("Server Tool");
-            // if ui.button("Reload manifest").clicked() {
-            //     self.manifest =
-            //         futures::executor::block_on(manifest::get_version_infos()).expect("oops");
-            // }
             // if ui.button("Refetch manifest").clicked() {
             //     self.manifest =
             //         futures::executor::block_on(manifest::update_manifest()).expect("oops");
