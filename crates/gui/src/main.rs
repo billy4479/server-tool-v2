@@ -3,6 +3,7 @@
 use anyhow::Result;
 use eframe::egui::{self, Label};
 use poll_promise::Promise;
+use rfd::FileDialog;
 use server_tool::{
     config::Config,
     manifest::{self, VersionManifest},
@@ -25,7 +26,7 @@ async fn main() -> Result<()> {
 #[derive(Default)]
 struct MyApp {
     config: Option<Promise<Result<Config>>>,
-    manifest: Option<Promise<Result<Vec<VersionManifest>>>>,
+    manifest: Option<Promise<Vec<VersionManifest>>>,
     show_config_window: bool,
     show_manifest_window: bool,
 }
@@ -55,7 +56,10 @@ impl MyApp {
     fn load_manifest(&mut self, ui: &mut egui::Ui) -> Option<&Vec<VersionManifest>> {
         let manifest = self.manifest.get_or_insert_with(|| {
             let (sender, promise) = Promise::new();
-            sender.send(futures::executor::block_on(manifest::get_version_infos()));
+
+            tokio::spawn(async {
+                sender.send(manifest::get_version_infos().await);
+            });
 
             promise
         });
@@ -133,10 +137,20 @@ impl eframe::App for MyApp {
                 self.show_manifest_window = !self.show_manifest_window;
             }
 
-            // if ui.button("Refetch manifest").clicked() {
-            //     self.manifest =
-            //         futures::executor::block_on(manifest::update_manifest()).expect("oops");
-            // }
+            if ui.button("magic button").clicked() {
+                let aaa = FileDialog::new()
+                    // .set_directory(current_exe()?)
+                    .set_title("MAGICOOO")
+                    .pick_folder();
+
+                if let Some(bbb) = aaa {
+                    println!("{:?}", bbb);
+                }
+            }
+
+            if ui.button("Refetch manifest").clicked() {
+                self.manifest = None;
+            }
             // if ui.button("Reload config").clicked() {
             //     self.config = Config::load().expect("lol");
             // }

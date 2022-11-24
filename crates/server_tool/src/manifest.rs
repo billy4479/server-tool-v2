@@ -7,12 +7,12 @@ use anyhow::{anyhow, bail, Error, Result};
 use futures::future;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct VersionManifest {
-    id: String,
-    jar_url: String,
-    java_version: u64,
-    sha1: String,
+    pub id: String,
+    pub jar_url: String,
+    pub java_version: u64,
+    pub sha1: String,
 }
 
 fn get_manifest_path() -> Result<PathBuf> {
@@ -31,7 +31,7 @@ pub async fn get_version_infos() -> Result<Vec<VersionManifest>> {
 
     let path = get_manifest_path()?;
     match fs::metadata(&path) {
-        Ok(meta) => {
+        Ok(_meta) => {
             // TODO: check expired manifest
             log::info!("Version manifest was found, loading it.");
             Ok(serde_json::from_reader(File::open(path)?)?)

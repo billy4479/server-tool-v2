@@ -1,6 +1,9 @@
-use std::path;
+use std::{fs, path};
 
 use anyhow::Result;
+use sha1::{Digest, Sha1};
+
+use crate::manifest::{get_version_infos, VersionManifest};
 
 #[derive(Default, Debug)]
 pub enum ServerType {
@@ -13,14 +16,15 @@ pub enum ServerType {
 pub struct Server {
     pub name: String,
     pub path: path::PathBuf,
-    pub version: String,
+    pub version: VersionManifest,
     pub has_git: bool,
     pub server_type: ServerType,
 }
 
 impl Server {
-    pub fn find(base_dir: &path::Path) -> Result<Vec<Server>> {
+    pub async fn find(base_dir: &path::Path) -> Result<Vec<Server>> {
         let mut result = Vec::<Server>::new();
+        let versions = get_version_infos().await?;
 
         for entry_result in base_dir.read_dir()? {
             let Ok(entry) = entry_result else {
@@ -31,7 +35,7 @@ impl Server {
                 continue;
             }
 
-            if let Some(server) = Self::detect(&entry.path())? {
+            if let Some(server) = Self::detect(&entry.path(), &versions)? {
                 result.push(server)
             }
         }
@@ -39,7 +43,7 @@ impl Server {
         Ok(result)
     }
 
-    fn detect(path: &path::Path) -> Result<Option<Server>> {
+    fn detect(path: &path::Path, versions: &Vec<VersionManifest>) -> Result<Option<Server>> {
         const MINECRAFT_JAR: &str = "server.jar";
         const FABRIC_JAR: &str = "fabric-server-launch.jar";
         const GIT_FOLDER: &str = ".git";
@@ -61,6 +65,23 @@ impl Server {
                     .to_str()
                     .expect("string conversion")
                     .to_string();
+
+                let file = fs::read(entry.path())?;
+                let mut hasher = Sha1::new();
+                hasher.update(file);
+                let hash = hex::encode(hasher.finalize());
+
+                for version in versions {
+                    if version.sha1 == hash {
+                        result.version = version.clone();
+                        found = true;
+                        break;
+                    }
+                }
+
+                if !found {
+                    continue;
+                }
             } else if entry.file_name() == FABRIC_JAR {
                 result.server_type = ServerType::Fabric;
             }
@@ -71,9 +92,5 @@ impl Server {
         } else {
             Ok(None)
         }
-    }
-
-    fn detect_version(jar_path: &path::Path) -> Result<Option<String>> {
-        todo!()
     }
 }
